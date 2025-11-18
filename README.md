@@ -1,16 +1,49 @@
-# React + Vite
+# Sistema de Farmacia
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación React + Vite que consume una API Express para mostrar la información real guardada en tu base de datos Oracle. Este repositorio contiene dos proyectos:
 
-Currently, two official plugins are available:
+- `src/`: el frontend en React.
+- `server/`: un backend mínimo en Node.js/Express que expone la base de datos mediante endpoints REST.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Requisitos
 
-## React Compiler
+- Node.js 20+
+- Oracle Database accesible desde la máquina donde corre el backend.
+- [Oracle Instant Client](https://www.oracle.com/database/technologies/instant-client.html) instalado si ejecutas el backend en Linux/macOS (necesario para el paquete `oracledb`).
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+## Configurar el backend
 
-## Expanding the ESLint configuration
+1. Copia el archivo de ejemplo y agrega tus credenciales reales:
+   ```bash
+   cp server/.env.example server/.env
+   ```
+   Edita `server/.env` y coloca los valores correctos (`ORACLE_USER`, `ORACLE_PASSWORD`, `ORACLE_CONNECT_STRING`).
+2. Instala las dependencias del backend:
+   ```bash
+   cd server
+   npm install
+   ```
+3. Inicia la API:
+   ```bash
+   npm start
+   ```
+   Por defecto escuchará en `http://localhost:3000` y expone el endpoint `GET /api/productos` que lee la tabla `PRODUCTOS` de Oracle.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Ejecutar el frontend
+
+En otra terminal:
+```bash
+npm install
+npm run dev
+```
+La aplicación consultará `http://localhost:3000/api/productos`, mostrará el estado de carga y luego listará los productos reales que devuelve Oracle.
+
+## Personalización
+
+- Si necesitas más endpoints, agrégalos en `server/index.js` reutilizando la función `runQuery`.
+- Si deseas servir ambos proyectos juntos en producción, compila el frontend con `npm run build` y sirve los archivos estáticos detrás del mismo dominio que la API (por ejemplo con Nginx o el propio Express usando `app.use(express.static(...))`).
+
+## Seguridad
+
+- No publiques `server/.env`. El archivo ya está incluido en `.gitignore`.
+- Usa un usuario de Oracle con permisos limitados en lugar de `SYSTEM` para evitar riesgos en caso de fuga de credenciales.
