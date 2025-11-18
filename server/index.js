@@ -1,3 +1,4 @@
+import fs from 'fs'
 import express from 'express'
 import cors from 'cors'
 import oracledb from 'oracledb'
@@ -12,6 +13,10 @@ app.use(cors())
 async function runQuery(sql, binds = [], options = {}) {
   let connection
   try {
+    // console.log('Intentando conectar con:', {
+    //   user: process.env.ORACLE_USER,
+    //   connectString: process.env.ORACLE_CONNECT_STRING
+    // })
     connection = await oracledb.getConnection({
       user: process.env.ORACLE_USER,
       password: process.env.ORACLE_PASSWORD,
@@ -37,11 +42,16 @@ async function runQuery(sql, binds = [], options = {}) {
 app.get('/api/productos', async (_req, res) => {
   try {
     const { rows } = await runQuery(
-      `SELECT ID_PRODUCTO, NOMBRE, PRECIO FROM PRODUCTOS ORDER BY NOMBRE`
+      `SELECT IDPRODUCTO AS ID_PRODUCTO, DESCRIPCION AS NOMBRE, PRECIO FROM PRODUCTOS ORDER BY DESCRIPCION`
     )
     res.json(rows)
   } catch (error) {
     console.error('Error consultando productos', error)
+    try {
+      fs.appendFileSync('error.log', `${new Date().toISOString()} - ${error.message}\n${error.stack}\n\n`)
+    } catch (logError) {
+      console.error('Error escribiendo log', logError)
+    }
     res.status(500).json({ message: 'Error consultando Oracle' })
   }
 })
