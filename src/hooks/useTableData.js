@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchTable, createRecord, updateRecord, deleteRecord } from '../services/apiClient'
-import { mockData } from '../data/mockData'
 
 const normalizeValue = (value, type) => {
   if (value === null || value === undefined) return ''
@@ -28,7 +27,7 @@ const encodeKey = (schema, record) => {
   if (Array.isArray(schema.primaryKey)) {
     return schema.primaryKey.map((key) => `${key}=${record[key]}`).join('|')
   }
-  return `${schema.primaryKey}=${record[schema.primaryKey]}`
+  return record[schema.primaryKey]
 }
 
 const useTableData = (tableName, schema) => {
@@ -41,8 +40,6 @@ const useTableData = (tableName, schema) => {
     [schema]
   )
 
-  const getMock = useCallback(() => mockData[tableName] ?? [], [tableName])
-
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
@@ -50,29 +47,17 @@ const useTableData = (tableName, schema) => {
       setRecords(applySort(data))
       setError(null)
     } catch (apiError) {
-      console.warn('Fallo la API, usando datos de ejemplo', apiError)
-      setRecords(applySort(getMock()))
-      setError('Mostrando datos de ejemplo. Revisa la conexión con Oracle.')
+      console.error('Fallo la API', apiError)
+      setError(`Error de conexión: ${apiError.message}`)
+      setRecords([])
     } finally {
       setLoading(false)
     }
-  }, [tableName, applySort, getMock])
+  }, [tableName, applySort])
 
   useEffect(() => {
     refresh()
   }, [refresh])
-
-  const upsertLocalRecord = useCallback(
-    (payload, matcher, updater) => {
-      setRecords((prev) => {
-        const next = prev.map((record) =>
-          matcher(record) ? { ...record, ...updater(record) } : record
-        )
-        return applySort(next)
-      })
-    },
-    [applySort]
-  )
 
   const create = useCallback(
     async (payload) => {
@@ -86,10 +71,8 @@ const useTableData = (tableName, schema) => {
         setError(null)
         return { success: true }
       } catch (apiError) {
-        console.warn('No se pudo crear en Oracle, guardando en memoria', apiError)
-        const optimistic = { ...prepared, _optimistic: true, _localId: Date.now() }
-        setRecords((prev) => applySort([...prev, optimistic]))
-        setError('Registro creado solo en memoria. Sincroniza cuando la API esté lista.')
+        console.error('Error creando registro:', apiError)
+        setError(`Error al crear: ${apiError.message}`)
         return { success: false, message: apiError.message }
       }
     },
@@ -101,25 +84,21 @@ const useTableData = (tableName, schema) => {
       const id = encodeKey(schema, record)
       try {
         await updateRecord(tableName, encodeURIComponent(id), record)
-        upsertLocalRecord(
-          record,
-          (current) => encodeKey(schema, current) === id,
-          () => record
-        )
+        setRecords((prev) => {
+          const next = prev.map((item) =>
+            encodeKey(schema, item) === id ? { ...item, ...record } : item
+          )
+          return applySort(next)
+        })
         setError(null)
         return { success: true }
       } catch (apiError) {
-        console.warn('No se pudo actualizar en Oracle, actualizando solo UI', apiError)
-        upsertLocalRecord(
-          record,
-          (current) => encodeKey(schema, current) === id,
-          () => record
-        )
-        setError('Actualización local. Verifica la API para guardar los cambios.')
+        console.error('Error actualizando registro:', apiError)
+        setError(`Error al actualizar: ${apiError.message}`)
         return { success: false, message: apiError.message }
       }
     },
-    [schema, tableName, upsertLocalRecord]
+    [schema, tableName, applySort]
   )
 
   const remove = useCallback(
@@ -127,18 +106,19 @@ const useTableData = (tableName, schema) => {
       const id = encodeKey(schema, record)
       try {
         await deleteRecord(tableName, encodeURIComponent(id))
+        setRecords((prev) => prev.filter((item) => encodeKey(schema, item) !== id))
+        setError(null)
       } catch (apiError) {
-        console.warn('No se pudo borrar en Oracle, removiendo solo en UI', apiError)
-        setError('Eliminación local. Confirma con la base de datos.')
+        console.error('Error eliminando registro:', apiError)
+        setError(`Error al eliminar: ${apiError.message}`)
       }
-      setRecords((prev) => prev.filter((item) => encodeKey(schema, item) !== id))
     },
     [schema, tableName]
   )
 
   const connectionState = useMemo(
     () => ({
-      status: error ? 'demo' : 'online',
+      status: error ? 'error' : 'online',
       message: error ?? 'Conectado a Oracle',
     }),
     [error]

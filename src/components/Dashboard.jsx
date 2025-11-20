@@ -51,11 +51,8 @@ const Dashboard = () => {
       <main className="flex-1 flex flex-col">
         <header className="border-b border-white/5 p-6 bg-slate-950/40 backdrop-blur flex flex-col gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Panel maestro</p>
-            <h1 className="text-3xl font-semibold">Sistema integral de farmacia</h1>
-            <p className="text-slate-400 max-w-3xl">
-              Administra la información corporativa de departamentos, inventarios, ventas y logística conectada a Oracle.
-            </p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400"> Dashboard Principal </p>
+
             <div className="mt-4 lg:hidden">
               <label className="text-xs uppercase tracking-[0.3em] text-slate-400 block mb-2">Tabla activa</label>
               <select
@@ -81,7 +78,7 @@ const Dashboard = () => {
               Tabla activa: {schema.label}
             </span>
             <span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded-full bg-white/10 text-slate-100">
-              Estado: {connectionState.status === 'online' ? 'Conectado a Oracle' : 'Modo demo' }
+              Estado: {connectionState.status === 'online' ? 'Conectado a Oracle' : 'Modo demo'}
             </span>
           </div>
         </header>
