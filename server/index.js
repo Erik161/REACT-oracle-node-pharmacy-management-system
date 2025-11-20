@@ -25,12 +25,16 @@ async function runQuery(sql, binds = [], options = {}) {
       connectString: process.env.ORACLE_CONNECT_STRING || 'localhost:1521/xe',
     })
 
-    const result = await connection.execute(sql, binds, {
+    const result = await connection.execute(
+      `ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'`
+    )
+
+    const resultQuery = await connection.execute(sql, binds, {
       outFormat: oracledb.OUT_FORMAT_OBJECT,
       autoCommit: true,
       ...options,
     })
-    return result
+    return resultQuery
   } catch (error) {
     console.error('Error ejecutando query:', error)
     throw error
@@ -96,13 +100,11 @@ const TABLE_CONFIG = {
     }
   },
   Proveedor: {
-    table: 'FABRICANTES',
-    pk: 'IDFAB',
+    table: 'PROVEEDOR',
+    pk: 'ID_PROVEEDOR',
     colMap: {
-      'ID_PROVEEDOR': 'IDFAB',
-      'NOMBRE_PROVEEDOR': 'NOMBRE',
-      'DIRECCION': 'DIRECCION',
-      'TELEFONO': 'TELEFONO'
+      'ID_PROVEEDOR': 'ID_PROVEEDOR',
+      'NOMBRE_PROVEEDOR': 'NOMBRE_PROVEEDOR'
     }
   },
   Tipo_Producto: {
@@ -114,15 +116,16 @@ const TABLE_CONFIG = {
     }
   },
   Producto: {
-    table: 'PRODUCTOS',
-    pk: 'IDPRODUCTO',
+    table: 'PRODUCTO',
+    pk: 'ID_PRODUCTO',
     colMap: {
-      'ID_PRODUCTO': 'IDPRODUCTO',
-      'NOMBRE_PRODUCTO': 'DESCRIPCION',
-      'PRECIO_VENTA': 'PRECIO',
-      'ID_PROVEEDOR': 'IDFAB',
-      'EXISTENCIAS': 'EXISTENCIAS',
-      'EXISTENCIAS': 'EXISTENCIAS'
+      'ID_PRODUCTO': 'ID_PRODUCTO',
+      'NOMBRE_PRODUCTO': 'NOMBRE_PRODUCTO',
+      'PRECIO_VENTA': 'PRECIO_VENTA',
+      'ID_PROVEEDOR': 'ID_PROVEEDOR',
+      'ID_TIPO_PRODUCTO': 'ID_TIPO_PRODUCTO',
+      'COSTO': 'COSTO',
+      'STOCK_MINIMO': 'STOCK_MINIMO'
     }
   },
   Inventario_Sucursal: {
@@ -262,6 +265,23 @@ const TABLE_CONFIG = {
       'DESCRIPCION': 'DESCRIPCION',
       'VALOR_COMPRA': 'VALOR_COMPRA'
     }
+  },
+  Departamento: {
+    table: 'DEPARTAMENTO',
+    pk: 'ID_DEPARTAMENTO',
+    colMap: {
+      'ID_DEPARTAMENTO': 'ID_DEPARTAMENTO',
+      'NOMBRE_DEPARTAMENTO': 'NOMBRE_DEPARTAMENTO'
+    }
+  },
+  Municipio: {
+    table: 'MUNICIPIO',
+    pk: 'ID_MUNICIPIO',
+    colMap: {
+      'ID_MUNICIPIO': 'ID_MUNICIPIO',
+      'ID_DEPARTAMENTO': 'ID_DEPARTAMENTO',
+      'NOMBRE_MUNICIPIO': 'NOMBRE_MUNICIPIO'
+    }
   }
 }
 
@@ -303,11 +323,41 @@ app.post('/api/:table', async (req, res) => {
   const dbCols = []
   const bindVars = {}
 
+  // Check if PK is provided in payload
+  let pkProvided = false
+  if (config.pk && !Array.isArray(config.pk)) {
+    if (payload[config.pk] !== undefined && payload[config.pk] !== '' && payload[config.pk] !== null) {
+      pkProvided = true
+    }
+  }
+
+  // Auto-increment logic for single PK (ONLY if not provided)
+  if (config.pk && !Array.isArray(config.pk) && !pkProvided) {
+    try {
+      const maxQuery = `SELECT MAX(${config.pk}) as max_id FROM ${config.table}`
+      const { rows } = await runQuery(maxQuery)
+      const nextId = (rows[0]?.MAX_ID || 0) + 1
+
+      dbCols.push(config.pk)
+      bindVars[config.pk] = nextId
+      console.log(`[POST] Generado ID ${nextId} para ${tableName}`)
+    } catch (err) {
+      console.error(`[POST] Error generando ID para ${tableName}:`, err)
+      return res.status(500).json({ message: 'Error generando ID' })
+    }
+  }
+
   for (const [key, value] of Object.entries(payload)) {
     const dbCol = config.colMap ? config.colMap[key] : key
     const isValidCol = config.colMap ? (key in config.colMap) : true
 
-    if (isValidCol && dbCol) {
+    // If PK is provided, include it. If generated, it's already in bindVars/dbCols
+    if (dbCol === config.pk) {
+      if (pkProvided) {
+        dbCols.push(dbCol)
+        bindVars[dbCol] = value
+      }
+    } else if (isValidCol && dbCol) {
       dbCols.push(dbCol)
       bindVars[dbCol] = value
     }
@@ -325,13 +375,14 @@ app.post('/api/:table', async (req, res) => {
   try {
     await runQuery(sql, bindVars)
     console.log(`[POST] Éxito en ${tableName}`)
-    res.status(201).json(payload)
+    // Return the ID (either provided or generated)
+    const responseId = pkProvided ? payload[config.pk] : bindVars[config.pk]
+    res.status(201).json({ ...payload, [config.pk]: responseId })
   } catch (error) {
     console.error(`[POST] Error en ${tableName}:`, error)
     res.status(500).json({ message: error.message })
   }
 })
-
 
 app.put('/api/:table/:id', async (req, res) => {
   const tableName = req.params.table
