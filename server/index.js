@@ -509,6 +509,26 @@ app.get('/api/debug/schema/:table', async (req, res) => {
   }
 })
 
+// Startup DB Check (Non-blocking)
+async function checkDbConnection() {
+  console.log('🔄 Verificando conexión a Oracle DB...')
+  let connection
+  try {
+    connection = await oracledb.getConnection({
+      user: process.env.ORACLE_USER || 'SYSTEM',
+      password: process.env.ORACLE_PASSWORD || '1234',
+      connectString: process.env.ORACLE_CONNECT_STRING || 'localhost:1521/xe',
+    })
+    console.log('✅ Conexión a Oracle DB EXITOSA')
+    await connection.close()
+  } catch (error) {
+    console.error('⚠️ ADVERTENCIA: No se pudo conectar a Oracle DB al inicio.')
+    console.error('   El servidor seguirá ejecutándose, pero las peticiones fallarán hasta que la BD esté disponible.')
+    console.error('   Error:', error.message)
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`API escuchando en http://localhost:${PORT}`)
+  checkDbConnection()
 })
