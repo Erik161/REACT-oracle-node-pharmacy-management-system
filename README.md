@@ -47,3 +47,5 @@ La aplicación consultará `http://localhost:3000/api/productos`, mostrará el e
 
 - No publiques `server/.env`. El archivo ya está incluido en `.gitignore`.
 - Usa un usuario de Oracle con permisos limitados en lugar de `SYSTEM` para evitar riesgos en caso de fuga de credenciales.
+
+
