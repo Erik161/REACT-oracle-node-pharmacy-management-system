@@ -2,14 +2,25 @@
 
 Dashboard administrativo construido con React + Vite y Tailwind CSS para gestionar las 21 tablas del modelo de farmacia (departamentos, clientes, inventario, ventas, logística y activos). Incluye un servidor Express de referencia para exponer CRUDs conectados a Oracle Database.
 
+##  Demo y Funcionalidades
 
+A continuación se muestra el sistema en funcionamiento:
 
-
-
+### 1. Vista General del Dashboard
+*Interfaz moderna con gráficas en tiempo real, KPIs animados y navegación fluida entre módulos.*
 ![Dashboard Farmacia](https://github.com/user-attachments/assets/a712d9fe-f9df-4072-ac1a-76b155c8cfd0)
 
+### 2. Crear Registros (Create)
+*Formularios dinámicos con validación de datos y selectores inteligentes para llaves foráneas.*
+![Dashboard-Farmacia-create](https://github.com/user-attachments/assets/8c5e927c-ba20-4a5d-8744-f1816db87f37)
 
+### 3. Actualizar Registros (Update)
+*Edición rápida y sencilla de la información existente mediante modales interactivos.*
+![Dashboard-Farmacia-update](https://github.com/user-attachments/assets/8e8d095e-7ad2-47f8-b223-972c7482b1c1)
 
+### 4. Eliminar Registros (Delete)
+*Gestión segura de datos con confirmaciones visuales para prevenir borrados accidentales.*
+![Dashboard-Farmacia-delete](https://github.com/user-attachments/assets/073aa7dd-1258-4855-96b3-77595fc329a7)
 
 
 ## Características principales
